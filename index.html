@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#dfe3e8">
 <title>cameronbownes.com</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚧</text></svg>">
 <style>
@@ -12,6 +13,10 @@
     --mail-bg: #ffffff;
     --mail-sub: #8e8e93;
     --mail-link: #0a7aff;
+    --mail-rule: #e5e5ea;
+    --col: 430px;            /* width of the phone on desktop */
+    --sbh: calc(44px + env(safe-area-inset-top, 0px));   /* status bar height */
+    --app-icon: linear-gradient(160deg, #23698d, #164a66);
     --desk: #dfe3e8;
     --dash-bg: #0f1a2b;
     --dash-panel: #16243a;
@@ -19,32 +24,126 @@
     --dash-text: #e8eef7;
     --dash-dim: #8aa0bf;
     --money: #3ddc97;
+    --loss: #ff5a5f;
     --hazard: #ffd200;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background: var(--desk); -webkit-tap-highlight-color: transparent; }
   img { max-width: 100%; display: block; }
-  section { min-height: 100vh; min-height: 100svh; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .icon { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
 
-  /* ---------- 1. Phone + email ---------- */
-  .s-mail { background: var(--desk); display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; padding: 40px 16px; }
-  .phone {
-    width: 390px; max-width: 100%; height: 800px; max-height: calc(100svh - 80px);
-    background: var(--mail-bg); border-radius: 48px; border: 12px solid #111;
-    box-shadow: 0 30px 60px rgba(20,30,50,.25); overflow: hidden; display: flex; flex-direction: column;
+  /* ---------- The phone ----------
+     Full screen on a phone; a phone-width column centred on a grey desk on desktop.
+     Everything inside is a stack of absolutely positioned screens: home, three apps,
+     and the lock screen on top. */
+  .phone { position: fixed; top: 0; bottom: 0; left: 50%; width: min(var(--col), 100%); transform: translateX(-50%); overflow: hidden; background: #fff; box-shadow: 0 0 40px rgba(20,30,50,.15); touch-action: manipulation; /* no double-tap zoom on "2, 2" */ }
+  .dock { user-select: none; -webkit-user-select: none; }
+  .screen { position: absolute; inset: 0; }
+
+  .statusbar { position: absolute; z-index: 50; top: 0; left: 0; right: 0; height: var(--sbh); padding: env(safe-area-inset-top, 0px) 26px 0 30px; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 15px; color: var(--sb-fg, #111); background: var(--sb-bg, transparent); pointer-events: none; transition: color .3s, background .3s; }
+  .statusbar .sb-icons { display: flex; gap: 6px; align-items: center; }
+  .statusbar svg { height: 12px; width: auto; fill: currentColor; }
+  .phone[data-screen="lock"]     { --sb-fg: #fff; }
+  .phone[data-screen="mail"]     { --sb-bg: #fff; }
+  .phone[data-screen="domains"],
+  .phone[data-screen="projects"] { --sb-fg: #fff; --sb-bg: var(--dash-bg); }
+
+  /* The home indicator. Tap it (or swipe up from the bottom edge) to go home. */
+  .homebar { position: absolute; z-index: 45; bottom: 0; left: 50%; transform: translateX(-50%); width: 160px; height: calc(22px + env(safe-area-inset-bottom, 0px)); display: grid; place-items: start center; padding-top: 9px; }
+  .homebar::before { content: ""; width: 134px; height: 5px; border-radius: 3px; background: var(--sb-fg, #111); opacity: .85; transition: background .3s; }
+  .phone[data-screen="lock"] .homebar { display: none; }
+
+  /* ---------- Lock screen ---------- */
+  .lock { z-index: 40; color: #fff; overflow: hidden; transition: transform .55s cubic-bezier(.6,0,.3,1), opacity .55s; }
+  .lock.unlocked { transform: translateY(-100%); opacity: .4; pointer-events: none; }
+  .lock-bg { position: absolute; inset: -40px; background: #333 url("CamHomeBackground.jpeg") center 20% / cover; filter: blur(22px) brightness(.5); }
+  /* The keys size themselves to the screen: as big as 78px, shrinking on short screens
+     (an SE in Safari has ~460px to play with) so the whole keypad always fits. */
+  .lock-ui {
+    --key: clamp(46px, min(calc((100vh - 250px) / 4.6), calc((100vw - 40px) / 3.7)), 78px);
+    --key: clamp(46px, min(calc((100dvh - 250px) / 4.6), calc((100vw - 40px) / 3.7)), 78px);
+    position: relative; height: 100%; overflow-y: auto; display: flex; flex-direction: column; align-items: center;
+    padding: calc(var(--sbh) + 12px) 20px calc(16px + env(safe-area-inset-bottom, 0px));
   }
-  .statusbar { display: flex; justify-content: space-between; padding: 14px 26px 6px; font-weight: 600; font-size: 15px; }
-  .mailnav { display: flex; justify-content: space-between; padding: 6px 16px 10px; color: var(--mail-link); font-size: 17px; border-bottom: 1px solid #ececf0; }
-  .mailbody { overflow-y: auto; flex: 1; }
+  .lock-ui > * { flex-shrink: 0; }
+  .lock-head { display: flex; flex-direction: column; align-items: center; }
+  .lock-ui .padlock { width: 26px; height: 26px; stroke-width: 2; }
+  .lock-ui h1 { font-size: 20px; font-weight: 500; margin: 10px 0 16px; }
+  .dots { display: flex; gap: 22px; height: 14px; }
+  .dots i { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #fff; transition: background .12s; }
+  .dots i.on { background: #fff; }
+  .dots.wrong { animation: shake .45s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-12px); } 40%, 80% { transform: translateX(12px); } }
+  .hint { font-size: 13px; margin: 12px 0 0; min-height: 18px; text-align: center; opacity: 0; transition: opacity .4s; letter-spacing: .04em; }
+  .hint.show { opacity: .85; }
+  .keypad { display: grid; grid-template-columns: repeat(3, var(--key)); gap: calc(var(--key) * .2) calc(var(--key) * .34); margin: auto 0; padding: 12px 0; user-select: none; -webkit-user-select: none; }
+  .key { width: var(--key); height: var(--key); border-radius: 50%; background: rgba(255,255,255,.16); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; transition: background .15s; }
+  .key:active, .key.pressed { background: rgba(255,255,255,.5); transition: none; }
+  .key b { font-size: calc(var(--key) * .44); font-weight: 400; }
+  .key small { font-size: max(8px, calc(var(--key) * .13)); font-weight: 700; letter-spacing: .2em; margin-top: 3px; padding-left: .2em; min-height: 1em; }
+  .key.zero { grid-column: 2; }
+  .lock-foot { width: 100%; display: flex; justify-content: space-between; padding: 0 22px; font-size: 16px; user-select: none; -webkit-user-select: none; }
+  .lock-foot button { padding: 10px 0; }
+  /* Landscape phone: heading and dots on the left, keypad on the right */
+  @media (max-height: 460px) and (orientation: landscape) {
+    .lock-ui {
+      --key: clamp(40px, calc((100vh - 110px) / 4.6), 62px);
+      --key: clamp(40px, calc((100dvh - 110px) / 4.6), 62px);
+      display: grid; grid-template-columns: 1fr auto; grid-template-rows: 1fr auto; align-items: center; column-gap: 12px;
+      padding: calc(var(--sbh) + 2px) 16px calc(6px + env(safe-area-inset-bottom, 0px));
+    }
+    .keypad { margin: 0; padding: 0; }
+    .lock-foot { grid-column: 1 / -1; }
+    .lock-ui h1 { font-size: 18px; margin: 8px 0 12px; }
+  }
+
+  /* ---------- Home screen ---------- */
+  .home { background: #fff; transition: transform .4s cubic-bezier(.2,.8,.2,1), filter .4s; }
+  .phone.in-app .home { transform: scale(.92); filter: brightness(.75); }
+  .wallpaper { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+  .dock { position: absolute; left: 12px; right: 12px; bottom: calc(30px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(3, 1fr); padding: 14px 8px 10px; border-radius: 30px; background: rgba(245,245,247,.55); -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4); border: 1px solid rgba(255,255,255,.6); }
+  .appicon { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .appicon .tile { position: relative; width: 62px; height: 62px; border-radius: 16px; background: var(--app-icon); color: #fff; display: grid; place-items: center; box-shadow: 0 4px 10px rgba(10,40,60,.3); transition: transform .15s; }
+  .appicon:active .tile { transform: scale(.9); }
+  .appicon:focus { outline: none; }
+  .appicon:focus-visible .tile { outline: 3px solid var(--mail-link); outline-offset: 3px; }
+  .appicon .tile .icon { width: 32px; height: 32px; stroke-width: 1.7; }
+  .appicon .label { font-size: 12px; font-weight: 500; color: #111; }
+  .badge { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: #ff3b30; color: #fff; font-size: 13px; font-weight: 600; display: grid; place-items: center; transition: transform .25s; }
+  .badge.gone { transform: scale(0); }
+  .phone.unlocked .appicon { animation: pop .5s cubic-bezier(.3,1.5,.6,1) backwards; }
+  .phone.unlocked .appicon:nth-child(2) { animation-delay: .06s; }
+  .phone.unlocked .appicon:nth-child(3) { animation-delay: .12s; }
+  @keyframes pop { from { transform: scale(.4); opacity: 0; } }
+
+  /* ---------- Apps ----------
+     Each app zooms open from its icon (--ox/--oy) and scrolls on its own. */
+  .app { z-index: 10; padding-top: var(--sbh); overflow: hidden; background: var(--app-bg, #fff); border-radius: 44px; transform: scale(.14); opacity: 0; visibility: hidden; transform-origin: var(--ox, 50%) var(--oy, 85%); transition: transform .36s cubic-bezier(.4,0,.6,1), opacity .25s .08s, border-radius .36s, visibility 0s .36s; }
+  .app.open { transform: none; opacity: 1; visibility: visible; border-radius: 0; transition: transform .45s cubic-bezier(.2,.9,.25,1), opacity .18s, border-radius .45s, visibility 0s; }
+  .scroller { height: 100%; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
+  /* ---------- Mail ---------- */
+  #app-mail { --app-bg: var(--mail-bg); }
+  .mailnav, .mailbar { color: var(--mail-link); background: rgba(255,255,255,.94); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); z-index: 5; }
+  .mailnav { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; padding: 8px 12px 8px 8px; font-size: 17px; border-bottom: 1px solid var(--mail-rule); }
+  /* Back to home, top left of every app */
+  .back { display: flex; align-items: center; gap: 2px; min-height: 30px; color: var(--mail-link); font-size: 17px; }
+  .appnav { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 8px 12px 8px 8px; color: #fff; background: rgba(15,26,43,.88); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid var(--dash-line); }
+  .appnav .back { justify-self: start; color: #6cb4ff; }
+  .appnav b { font-size: 17px; font-weight: 600; }
+  .mailnav .arrows { display: flex; gap: 20px; }
+  .mailbar { position: sticky; bottom: 0; display: flex; justify-content: space-between; padding: 10px 22px calc(30px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--mail-rule); }
   .mailhead { padding: 14px 16px 12px; }
-  .mailbody h1 { font-size: 20px; line-height: 1.3; font-weight: 500; margin: 0 0 14px; }
+  .mailhead h1 { font-size: 20px; line-height: 1.3; font-weight: 500; margin: 0 0 14px; }
   .sender { display: flex; gap: 10px; align-items: center; }
   .avatar { width: 40px; height: 40px; border-radius: 50%; background: #ff6a3d; color: #fff; display: grid; place-items: center; font-size: 20px; flex: none; }
   .sender b { font-size: 15px; }
   .tick { display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; background: #1a73e8; color: #fff; font-size: 9px; vertical-align: 1px; margin-left: 2px; }
   .sender .from { color: var(--mail-sub); font-size: 12.5px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .sender .time { margin-left: auto; color: var(--mail-sub); font-size: 12.5px; align-self: flex-start; }
+  .sender .time { margin-left: auto; color: var(--mail-sub); font-size: 12.5px; align-self: flex-start; white-space: nowrap; }
   .email { background: #f4f4f4; padding: 16px 14px 20px; color: #111; font-family: Arial, Helvetica, sans-serif; }
   .ehead { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
   .logo { display: flex; align-items: center; gap: 6px; font-size: 20px; font-weight: 800; letter-spacing: -.03em; }
@@ -59,81 +158,150 @@
   .efoot { color: #666; font-size: 11px; line-height: 1.6; margin-top: 16px; }
   .efoot p { margin: 0 0 8px; }
   .efoot .ref { text-align: right; margin-top: 14px; }
-  .scrollhint { text-align: center; color: var(--mail-sub); font-size: 13px; padding: 18px 0 26px; margin: 0; }
-  @media (max-width: 480px) {
-    .s-mail { padding: 0; place-items: stretch; }
-    .phone { border: 0; border-radius: 0; height: auto; max-height: none; min-height: 100svh; box-shadow: none; }
-    .statusbar { display: none; }
-    .mailnav { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
-  }
+  /* More of the inbox, stacked below the email */
+  .more { background: #f2f2f7; padding: 22px 12px 8px; }
+  .more h3 { margin: 0 6px 12px; color: var(--mail-sub); font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  .preview { display: grid; grid-template-columns: 40px 1fr auto; gap: 1px 10px; align-items: baseline; background: #fff; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .preview .av { grid-row: span 3; align-self: start; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; color: #fff; }
+  .preview .who { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .preview.unread .who::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--mail-link); margin-right: 6px; vertical-align: 2px; }
+  .preview time { color: var(--mail-sub); font-size: 12.5px; }
+  .preview .subj { grid-column: 2 / 4; font-size: 14.5px; }
+  .preview .snip { grid-column: 2 / 4; color: var(--mail-sub); font-size: 13.5px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-  /* ---------- 2. The meme ---------- */
-  .s-meme { background: #000; color: #fff; display: grid; place-items: center; padding: 40px 16px; text-align: center; }
-  .s-meme figure { margin: 0; max-width: 720px; }
-  .s-meme img { width: 100%; border-radius: 4px; }
-  .s-meme figcaption { font-size: clamp(20px, 4vw, 30px); font-weight: 700; margin-top: 20px; }
-  .meme-missing { aspect-ratio: 4/3; width: min(720px, 100%); border: 2px dashed #555; display: grid; place-items: center; color: #888; font-size: 15px; padding: 20px; }
-
-  /* ---------- 3. Investor dashboard ---------- */
-  .s-dash { background: var(--dash-bg); color: var(--dash-text); padding: 72px 20px; }
-  .dash { max-width: 1040px; margin: 0 auto; }
-  .dash h2 { font-size: clamp(26px, 4vw, 38px); margin: 0 0 6px; letter-spacing: -.01em; }
-  .dash .sub { color: var(--dash-dim); margin: 0 0 40px; font-size: 16px; }
-  .hero-num { font-size: clamp(56px, 13vw, 140px); font-weight: 800; color: var(--money); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
-  .hero-label { color: var(--dash-dim); margin: 10px 0 48px; font-size: 17px; }
-  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--dash-line); border: 1px solid var(--dash-line); }
-  .kpi { background: var(--dash-panel); padding: 22px 20px; }
-  .kpi .v { font-size: clamp(24px, 6vw, 32px); font-weight: 700; font-variant-numeric: tabular-nums; }
-  .kpi .l { color: var(--dash-dim); font-size: 14px; margin-top: 6px; line-height: 1.4; }
+  /* ---------- Domains: the photo, then the update ---------- */
+  #app-domains { --app-bg: var(--dash-bg); }
+  .meme { margin: 0; background: #000; }
+  .meme img { width: 100%; height: auto; }
+  .meme-missing { aspect-ratio: 2/3; border: 2px dashed #555; display: grid; place-items: center; color: #888; font-size: 15px; padding: 20px; }
+  .scrollcue { position: absolute; z-index: 6; left: 50%; bottom: calc(34px + env(safe-area-inset-bottom, 0px)); width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: rgba(0,0,0,.45); color: #fff; display: grid; place-items: center; pointer-events: none; transition: opacity .3s; animation: nudge 1.6s ease-in-out infinite; }
+  .scrollcue.gone { opacity: 0; }
+  @keyframes nudge { 50% { transform: translateY(6px); } }
+  .dash { color: var(--dash-text); padding: 30px 20px calc(48px + env(safe-area-inset-bottom, 0px)); }
+  .eyebrow { margin: 0 0 12px; color: var(--dash-dim); font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+  .hero-num { font-size: clamp(40px, 14vw, 58px); font-weight: 800; color: var(--money); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
+  .hero-label { color: var(--dash-dim); margin: 8px 0 22px; font-size: 14px; }
+  .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--dash-line); border: 1px solid var(--dash-line); }
+  .kpi { background: var(--dash-panel); padding: 12px 14px; }
+  .kpi .v { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kpi .l { color: var(--dash-dim); font-size: 12.5px; margin-top: 3px; line-height: 1.35; }
   .kpi .v.bad { color: #ff6b6b; }
-  @media (max-width: 720px) { .kpis { grid-template-columns: repeat(2, 1fr); } .kpi { padding: 18px 14px; } }
-  .chart { margin-top: 48px; }
-  .chart h3 { font-size: 16px; color: var(--dash-dim); font-weight: 600; margin: 0 0 14px; }
-  .bars { display: flex; align-items: flex-end; gap: 8px; height: 200px; /* 176px bar track + 24px year label */ border-bottom: 1px solid var(--dash-line); overflow-x: auto; }
-  .bar { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
-  .bar i { display: block; width: 100%; background: var(--money); height: 0; transition: height 1.2s cubic-bezier(.2,.8,.2,1); border-radius: 3px 3px 0 0; }
-  .bar span { font-size: 12px; line-height: 18px; color: var(--dash-dim); margin-top: 6px; }
-  .bar b { font-weight: 400; } .bar .ys { display: none; }
-  @media (max-width: 600px) { .bars { gap: 4px; } .bar .yl { display: none; } .bar .ys { display: inline; } }
-  .footnote { color: var(--dash-dim); font-size: 13px; margin-top: 28px; }
+  .footnote { color: var(--dash-dim); font-size: 12px; margin: 12px 0 0; }
+  /* Cumulative position: red bars hanging below a break-even line, sinking further every
+     year. The last bar is "∞" and keeps going past the end of the page. */
+  .chart { margin-top: 24px; }
+  .chart h3 { display: flex; justify-content: space-between; font-size: 13px; color: var(--dash-dim); font-weight: 600; margin: 0; }
+  .chart h3 small { color: var(--money); font-size: 11px; font-weight: 600; }
+  .bars { display: flex; align-items: flex-start; gap: 4px; height: 94px; margin-top: 22px; /* year labels sit in the 22px above the line */ border-top: 2px dashed var(--money); }
+  .bar { flex: 1 1 0; min-width: 0; position: relative; }
+  .bar span { position: absolute; left: -4px; right: -4px; bottom: 100%; padding-bottom: 3px; text-align: center; font-size: 11px; line-height: 18px; color: var(--dash-dim); }
+  .bar i { display: block; width: 100%; background: var(--loss); height: 0; transition: height 1.2s cubic-bezier(.2,.8,.2,1); border-radius: 0 0 3px 3px; }
+  .bar.forever span { color: var(--loss); font-weight: 700; }
+  .bar.forever i { border-radius: 0; background: linear-gradient(var(--loss) calc(100% - 200px), transparent); transition: height 2.6s cubic-bezier(.55,0,.25,1); }
 
-  /* ---------- 4. Under construction, 1998 ---------- */
-  .s-uc {
-    background: #000080 url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><text x='4' y='26' font-size='18' fill='%23ffffff' opacity='.5'>*</text></svg>");
-    color: #fff; font-family: "Times New Roman", Times, serif; text-align: center; padding: 48px 16px 80px;
+  /* ---------- Projects: under construction + the sign ---------- */
+  #app-projects { --app-bg: var(--dash-bg); }
+  .scroller.stack { display: flex; flex-direction: column; }
+  .uc { flex: 1 0 auto; color: var(--dash-text); overflow: hidden; display: flex; flex-direction: column; }
+  .tape { height: 16px; flex: none; background: repeating-linear-gradient(-45deg, var(--hazard) 0 16px, #111 16px 32px); }
+  .tape:last-child { margin-bottom: calc(22px + env(safe-area-inset-bottom, 0px)); }
+  .uc-body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 28px 16px; }
+  .uc-head { text-align: center; }
+  .uc-head .cone { font-size: 44px; line-height: 1; }
+  .uc-head h2 { color: var(--hazard); font-size: clamp(30px, 10vw, 40px); font-weight: 800; text-transform: uppercase; letter-spacing: .02em; line-height: 1.05; margin: 12px 0 0; }
+
+  .stage { width: 100%; margin: 28px auto 0; }
+  /* Short screens: drop the cone and tighten up so the whole sign is on screen before he falls */
+  @media (max-height: 640px) {
+    .uc-body { padding: 14px 16px; }
+    .uc-head .cone { display: none; }
+    .uc-head h2 { font-size: 28px; margin: 0; }
+    .stage { margin-top: 10px; }
   }
-  .tape { height: 34px; background: repeating-linear-gradient(-45deg, var(--hazard) 0 22px, #000 22px 44px); margin: 0 -16px; }
-  .marquee { overflow: hidden; white-space: nowrap; background: #000; color: #0f0; font-family: "Courier New", monospace; padding: 6px 0; margin: 24px -16px; }
-  .marquee span { display: inline-block; padding-left: 100%; animation: scroll 16s linear infinite; }
-  @keyframes scroll { to { transform: translateX(-100%); } }
-  .s-uc h2 { font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", cursive; color: var(--hazard); font-size: clamp(34px, 8vw, 72px); margin: 30px 0 10px; text-shadow: 3px 3px 0 #f00; }
-  .blink { animation: blink 1s steps(1) infinite; }
-  @keyframes blink { 50% { visibility: hidden; } }
-  .digger { font-size: 80px; margin: 10px 0; display: inline-block; animation: dig .6s ease-in-out infinite alternate; }
-  @keyframes dig { to { transform: rotate(-14deg); } }
-  .s-uc p { font-size: 19px; }
-  .s-uc a { color: #ff0; }
-  .counter { display: inline-flex; gap: 2px; margin-top: 20px; }
-  .counter b { background: #000; color: #f00; font-family: "Courier New", monospace; font-size: 24px; padding: 2px 6px; border: 1px inset #888; }
-  .badges { margin-top: 28px; font-size: 13px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  .badges span { border: 2px outset #c0c0c0; background: #c0c0c0; color: #000; padding: 4px 8px; font-family: Arial, sans-serif; }
-  hr.rainbow { height: 6px; border: 0; background: linear-gradient(90deg, red, orange, yellow, lime, cyan, blue, violet); margin: 30px auto; max-width: 600px; }
+  .stage svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .stage text { font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif; font-weight: 900; fill: #111; }
+  .stage .ink { fill: none; stroke: #111; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+  .stage .solid { fill: #fff; }
+  .stage .note { font-family: Georgia, serif; font-weight: 400; fill: var(--dash-text); font-size: 22px; opacity: 0; }
+  .stage .bang { fill: var(--hazard); font-size: 44px; opacity: 0; }
+  /* Every moving part rotates about a point given in its own coordinates. */
+  .stage g, .stage text { transform-box: view-box; }
+  .p-fall, .p-breathe { transform-origin: 0 0; }
+  .p-head { transform-origin: 2px -190px; }
+  .p-eye  { transform-origin: 30px -237px; }
+  .p-arm  { transform-origin: 20px -158px; }
+  .eight  { transform-origin: 250px 278px; }
+  .bang   { transform-origin: 140px 140px; }
+
+  /* Idle: breathing, a bit of head-bobbing, blinking and whistling */
+  .idle .p-breathe { animation: breathe 2.4s ease-in-out infinite alternate; }
+  .idle .p-head    { animation: bob 1.2s ease-in-out infinite alternate; }
+  .idle .p-eye     { animation: blink 3.6s infinite; }
+  .idle .note      { animation: whistle 2.4s ease-out infinite; }
+  .idle .note.n2   { animation-delay: 1.2s; }
+  @keyframes breathe { to { transform: scale(1.012, 1.025); } }
+  @keyframes bob     { from { transform: rotate(-2deg); } to { transform: rotate(4deg); } }
+  @keyframes blink   { 0%, 90%, 100% { transform: scaleY(1); } 94% { transform: scaleY(.1); } }
+  @keyframes whistle {
+    0%   { opacity: 0; transform: translate(0, 0) rotate(0); }
+    20%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(34px, -60px) rotate(18deg); }
+  }
+  .done .person { visibility: hidden; }
+  .done .eight { transform: rotate(90deg); }
 
   @media (prefers-reduced-motion: reduce) {
-    .marquee span, .blink, .digger { animation: none; }
-    .marquee span { padding-left: 0; }
-    .bar i { transition: none; }
+    .lock, .home, .app, .app.open, .bar i, .bar.forever i, .badge { transition: none; }
+    .phone.unlocked .appicon, .scrollcue, .dots.wrong { animation: none; }
+    .idle .p-breathe, .idle .p-head, .idle .p-eye, .idle .note { animation: none; }
   }
 </style>
 </head>
 <body>
 
-<!-- 1. THE EMAIL -->
-<section class="s-mail" aria-label="An email">
-  <div class="phone">
-    <div class="statusbar"><span>9:41</span><span>📶 🔋</span></div>
-    <div class="mailnav"><span>‹ Inbox</span><span>⋯</span></div>
-    <div class="mailbody">
+<div class="phone" id="phone" data-screen="lock">
+
+  <div class="statusbar" aria-hidden="true">
+    <span id="clock">9:41</span>
+    <span class="sb-icons">
+      <svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+      <svg viewBox="0 0 16 12"><path d="M8 2.2c2.3 0 4.4.9 6 2.4l1.2-1.3A10.4 10.4 0 0 0 8 .4C5.2.4 2.7 1.5.8 3.3L2 4.6a8.6 8.6 0 0 1 6-2.4Zm0 3.6c1.3 0 2.5.5 3.4 1.3l1.2-1.3A6.7 6.7 0 0 0 8 4c-1.8 0-3.4.7-4.6 1.8l1.2 1.3c.9-.8 2.1-1.3 3.4-1.3Zm0 3.5c-.5 0-1 .2-1.3.6L8 11.6l1.3-1.7c-.3-.4-.8-.6-1.3-.6Z"/></svg>
+      <svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="22" height="11" rx="3" fill="none" stroke="currentColor" opacity=".45"/><rect x="2" y="2" width="9" height="8" rx="1.6"/><rect x="24" y="4" width="2" height="4" rx="1" opacity=".45"/></svg>
+    </span>
+  </div>
+
+  <!-- HOME -->
+  <section class="screen home" id="home" aria-label="Home screen">
+    <img class="wallpaper" src="CamHomeBackground.jpeg" alt="">
+    <nav class="dock" aria-label="Apps">
+      <button class="appicon" type="button" data-open="mail">
+        <span class="tile">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg>
+          <b class="badge" id="mailBadge">3</b>
+        </span>
+        <span class="label">Mail</span>
+      </button>
+      <button class="appicon" type="button" data-open="domains">
+        <span class="tile"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.4 3.8 5.4 3.8 9s-1.3 6.6-3.8 9M12 3C9.5 5.4 8.2 8.4 8.2 12s1.3 6.6 3.8 9"/></svg></span>
+        <span class="label">Domains</span>
+      </button>
+      <button class="appicon" type="button" data-open="projects">
+        <span class="tile"><svg class="icon" viewBox="0 0 24 24"><path d="M3 18h18M5 18v-2.5a7 7 0 0 1 14 0V18M10 9.2V6h4v3.2"/></svg></span>
+        <span class="label">Projects</span>
+      </button>
+    </nav>
+  </section>
+
+  <!-- MAIL -->
+  <section class="screen app" id="app-mail" aria-label="Mail">
+    <div class="scroller">
+      <div class="mailnav">
+        <button class="back" type="button" data-home><svg class="icon" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg>Inbox</button>
+        <span class="arrows" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg>
+          <svg class="icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+        </span>
+      </div>
       <div class="mailhead">
         <h1>Action required: .NET 8.0/9.0 on Windows Hosting (Plesk) is retiring on 10th Nov 2026.</h1>
         <div class="sender">
@@ -149,12 +317,12 @@
       <div class="email">
         <div class="ehead">
           <div class="logo"><i aria-hidden="true">😎</i>CamDaddy</div>
-          <div class="ehelp">Need help? <a href="#meme">Don't.</a><br>Customer Number: 00000001</div>
+          <div class="ehelp">Need help? <a href="#" data-open="domains">Don't.</a><br>Customer Number: 00000001</div>
         </div>
         <div class="card">
           <h2>.NET 8.0/9.0 on Windows Hosting (Plesk) will retire on 10th Nov 2026.</h2>
-          <p>We've made the brave decision to discontinue .NET 8.0/9.0 on Windows Hosting (Plesk) on 10th Nov 2026. The following mission-critical asset will be affected by this retirement: <a class="site" href="#dash">cameronbownes.com</a></p>
-          <p>To find out how this impacts you and what steps you need to take, check out our <a href="#uc">help article</a>. It says "upgrade your code". If you have any questions, you can reach out to our support team, who will send you the help article.</p>
+          <p>We've made the brave decision to discontinue .NET 8.0/9.0 on Windows Hosting (Plesk) on 10th Nov 2026. The following mission-critical asset will be affected by this retirement: <a class="site" href="#" data-open="domains">cameronbownes.com</a></p>
+          <p>To find out how this impacts you and what steps you need to take, check out our <a href="#" data-open="projects">help article</a>. It says "upgrade your code". If you have any questions, you can reach out to our support team, who will send you the help article.</p>
         </div>
         <div class="efoot">
           <p>Please do not reply to this email. Emails sent to this address will be printed out and thrown in the bin.</p>
@@ -162,59 +330,182 @@
           <p class="ref">REF 19.99→36.00</p>
         </div>
       </div>
-      <p class="scrollhint">Scroll ↓</p>
+
+      <div class="more">
+        <h3>Also in your inbox</h3>
+        <div class="preview unread">
+          <div class="av" style="background:#ff6a3d">😎</div>
+          <b class="who">CamDaddy</b><time>Yesterday</time>
+          <div class="subj">Your account renewal is due</div>
+          <div class="snip">Good news! cameronbownes.com renews soon for $36.00. No action needed. We'll take it either way.</div>
+        </div>
+        <div class="preview unread">
+          <div class="av" style="background:#2e9e5b">🤑</div>
+          <b class="who">ScamDaddy</b><time>Tue</time>
+          <div class="subj">I have business proposition</div>
+          <div class="snip">Dear Sir/Madam, I am Prince of Hosting. I have $4.7M USD in unused .NET 8.0 credits and require a trusted website to receive them.</div>
+        </div>
+        <div class="preview">
+          <div class="av" style="background:#5b6b7f">🐇</div>
+          <b class="who">Saltmarsh Neighbourhood Watch</b><time>Mon</time>
+          <div class="subj">Dubious Rabbit</div>
+          <div class="snip">Has anyone else seen the rabbit by the bins on Saltmarsh Rd? Third day now. Just sitting there. Watching. Please do not approach.</div>
+        </div>
+        <div class="preview">
+          <div class="av" style="background:#ff6a3d">😎</div>
+          <b class="who">CamDaddy</b><time>Sat</time>
+          <div class="subj">An update to your pricing</div>
+          <div class="snip">To keep delivering the same great service, we'll be charging more for it.</div>
+        </div>
+        <div class="preview">
+          <div class="av" style="background:#ff6a3d">😎</div>
+          <b class="who">CamDaddy</b><time>28 Sep</time>
+          <div class="subj">Your site had 0 visitors this week</div>
+          <div class="snip">Have you considered Visibility Boost Pro? Just $19.99/month, renewing automatically, forever.</div>
+        </div>
+      </div>
+
+      <div class="mailbar" aria-hidden="true">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M5 21V4h12l-2 4 2 4H5"/></svg>
+        <svg class="icon" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></svg>
+        <svg class="icon" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+        <svg class="icon" viewBox="0 0 24 24"><path d="m10 7-6 5 6 5M4 12h10a6 6 0 0 1 6 6"/></svg>
+        <svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- 2. THE REACTION -->
-<section id="meme" class="s-meme" aria-label="Reaction">
-  <figure>
-    <img src="BadDayBen.jpg" alt="Ben Affleck, exhausted, smoking a cigarette"
-         onerror="this.outerHTML='<div class=&quot;meme-missing&quot;>Add BadDayBen.jpg to the repo</div>'">
-    <figcaption>Me, reading that email about a one-page joke site.</figcaption>
-  </figure>
-</section>
+  <!-- DOMAINS -->
+  <section class="screen app" id="app-domains" aria-label="Domains">
+    <div class="scroller">
+      <nav class="appnav"><button class="back" type="button" data-home><svg class="icon" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg>Home</button><b>Domains</b></nav>
+      <figure class="meme">
+        <img src="BadDayBen.jpg" alt="Ben Affleck, exhausted, smoking a cigarette"
+             onerror="this.outerHTML='<div class=&quot;meme-missing&quot;>Add BadDayBen.jpg to the repo</div>'">
+      </figure>
 
-<!-- 3. THE INVESTOR UPDATE -->
-<section id="dash" class="s-dash" aria-label="Investment performance">
-  <div class="dash">
-    <h2>Investor update: cameronbownes.com</h2>
-    <p class="sub">Total capital deployed into this asset to date.</p>
-    <div class="hero-num" id="total">$0</div>
-    <div class="hero-label">AUD spent on hosting and domain renewals since January <span id="since"></span></div>
+      <section class="dash" aria-label="Update">
+        <div class="eyebrow">Update · cameronbownes.com</div>
+        <div class="hero-num" id="total">$0</div>
+        <div class="hero-label">AUD invested in hosting and domain renewals</div>
 
-    <div class="kpis">
-      <div class="kpi"><div class="v" id="yearsUp">0</div><div class="l">Years online, and counting</div></div>
-      <div class="kpi"><div class="v" id="renewals">0</div><div class="l">Consecutive annual renewals</div></div>
-      <div class="kpi"><div class="v" id="perVisit">$0</div><div class="l">Cost per intentional visit</div></div>
-      <div class="kpi"><div class="v" id="perDay">$0</div><div class="l">Cost per day online</div></div>
-      <div class="kpi"><div class="v bad">$0.00</div><div class="l">Revenue generated</div></div>
-      <div class="kpi"><div class="v bad">−100%</div><div class="l">Return on investment</div></div>
+        <div class="kpis">
+          <div class="kpi"><div class="v" id="yearsUp">0</div><div class="l">Years online, and counting</div></div>
+          <div class="kpi"><div class="v" id="renewals">0</div><div class="l">Consecutive annual renewals</div></div>
+          <div class="kpi"><div class="v" id="perVisit">$0</div><div class="l">Cost per intentional visit</div></div>
+          <div class="kpi"><div class="v" id="perDay">$0</div><div class="l">Cost per day online</div></div>
+          <div class="kpi"><div class="v bad">$0.00</div><div class="l">Revenue generated</div></div>
+          <div class="kpi"><div class="v bad">−100%</div><div class="l">Return on investment</div></div>
+        </div>
+        <p class="footnote">Past performance is a reliable indicator of future performance.</p>
+
+        <div class="chart">
+          <h3>Path to break-even <small>Break-even: $0</small></h3>
+          <div class="bars" id="bars"></div>
+        </div>
+      </section>
     </div>
+    <div class="scrollcue" id="scrollcue" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+  </section>
 
-    <div class="chart">
-      <h3>Annual spend</h3>
-      <div class="bars" id="bars"></div>
+  <!-- PROJECTS -->
+  <section class="screen app" id="app-projects" aria-label="Projects">
+    <div class="scroller stack">
+      <nav class="appnav"><button class="back" type="button" data-home><svg class="icon" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg>Home</button><b>Projects</b></nav>
+      <div class="uc">
+        <div class="tape"></div>
+        <div class="uc-body">
+          <div class="uc-head">
+            <div class="cone" aria-hidden="true">🚧</div>
+            <h2>Under construction</h2>
+          </div>
+          <div class="stage" id="eta">
+            <svg viewBox="0 0 600 450" aria-hidden="true" class="idle" id="scene">
+              <line x1="-800" y1="430" x2="1400" y2="430" stroke="#24395a" stroke-width="3"/>
+
+              <!-- the sign -->
+              <g class="sign">
+                <rect x="204" y="362" width="12" height="68" class="solid ink" stroke-width="3"/>
+                <rect x="524" y="362" width="12" height="68" class="solid ink" stroke-width="3"/>
+                <rect x="170" y="100" width="400" height="262" rx="8" class="solid ink" stroke-width="4"/>
+                <rect x="182" y="112" width="376" height="238" rx="4" class="ink" stroke-width="2"/>
+                <text x="370" y="168" text-anchor="middle" font-size="24" letter-spacing="1">EXPECTED COMPLETION:</text>
+                <!-- a lemniscate stood on its end: an 8 now, an ∞ once it's rotated -->
+                <g class="eight" fill="none" stroke="#111" stroke-width="13" stroke-linejoin="round">
+                  <path d="M250.0 332.0 L257.6 331.2 L264.4 329.0 L270.1 325.7 L274.1 321.5 L276.6 317.0 L277.6 312.3 L277.4 307.8 L276.1 303.5 L274.0 299.4 L271.4 295.7 L268.3 292.3 L264.9 289.1 L261.4 286.2 L257.6 283.4 L253.8 280.7 L250.0 278.0 L246.2 275.3 L242.4 272.6 L238.6 269.8 L235.1 266.9 L231.7 263.7 L228.6 260.3 L226.0 256.6 L223.9 252.5 L222.6 248.2 L222.4 243.7 L223.4 239.0 L225.9 234.5 L229.9 230.3 L235.6 227.0 L242.4 224.8 L250.0 224.0 L257.6 224.8 L264.4 227.0 L270.1 230.3 L274.1 234.5 L276.6 239.0 L277.6 243.7 L277.4 248.2 L276.1 252.5 L274.0 256.6 L271.4 260.3 L268.3 263.7 L264.9 266.9 L261.4 269.8 L257.6 272.6 L253.8 275.3 L250.0 278.0 L246.2 280.7 L242.4 283.4 L238.6 286.2 L235.1 289.1 L231.7 292.3 L228.6 295.7 L226.0 299.4 L223.9 303.5 L222.6 307.8 L222.4 312.3 L223.4 317.0 L225.9 321.5 L229.9 325.7 L235.6 329.0 L242.4 331.2 L250.0 332.0 Z"/>
+                </g>
+                <text x="332" y="302" font-size="62">DAYS</text>
+              </g>
+      
+              <text class="note"      x="150" y="215">♪</text>
+              <text class="note n2"   x="150" y="215">♫</text>
+              <text class="bang"      x="128" y="158">!</text>
+      
+              <!-- the flat-pack man. Drawn with his feet at (0,0), facing right. -->
+              <g class="person" transform="translate(95 430)">
+                <g class="p-fall"><g class="p-breathe">
+                  <!-- legs: one chunky block, a seam down the middle, a foot kicked out each side -->
+                  <path class="solid ink" d="M-42 -92 L-37 -24 L-53 0 L48 0 L40 -22 L40 -92"/>
+                  <path class="ink" d="M0 0 V-66"/>
+                  <!-- body: a bell, open at the hips so there's no seam -->
+                  <path class="solid ink" d="M-42 -92 C-66 -102 -74 -128 -52 -150 C-34 -166 -16 -176 -12 -192 L16 -192 C20 -176 34 -168 52 -152 C68 -132 66 -104 40 -92"/>
+                  <!-- far arm, akimbo, drawn inside the body like the manuals do -->
+                  <path class="ink" d="M-26 -164 C-54 -150 -60 -124 -36 -116 M-36 -116 L-14 -119 M-38 -107 L-16 -110"/>
+                  <!-- head: the bean with the nose -->
+                  <g class="p-head">
+                    <path class="solid ink" d="M-12 -186 C-22 -205 -26 -236 -8 -252 C8 -266 40 -262 44 -238 C45 -232 44 -229 52 -222 C58 -216 52 -209 44 -212 C42 -204 30 -194 18 -186"/>
+                    <g class="p-eye"><circle cx="30" cy="-237" r="3.2" fill="#111"/></g>
+                    <path class="ink" d="M38 -207 C33 -199 24 -199 19 -205" stroke-width="3"/>
+                  </g>
+                  <!-- near arm, elbow on the 8 -->
+                  <g class="p-arm">
+                    <path d="M20 -158 L88 -200 L151 -216" fill="none" stroke="#111" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M20 -158 L88 -200 L151 -216" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path class="ink" d="M146 -222 L156 -223 M145 -212 L155 -213" stroke-width="2.5"/>
+                  </g>
+                </g></g>
+              </g>
+            </svg>
+            <p class="sr-only" id="etaText" aria-live="polite">Expected completion: 8 days.</p>
+          </div>
+        </div>
+        <div class="tape"></div>
+      </div>
     </div>
-    <p class="footnote">Past performance is a reliable indicator of future performance.</p>
-  </div>
-</section>
+  </section>
 
-<!-- 4. UNDER CONSTRUCTION -->
-<section id="uc" class="s-uc" aria-label="Under construction">
-  <div class="tape"></div>
-  <div class="marquee"><span>*** WELCOME TO CAMERONBOWNES.COM *** NOW .NET-FREE *** BEST VIEWED IN NETSCAPE NAVIGATOR AT 800x600 *** SIGN MY GUESTBOOK ***</span></div>
-  <div class="digger" aria-hidden="true">👷</div>
-  <h2>UNDER CONSTRUCTION</h2>
-  <p class="blink">🚧 Please check back soon! 🚧</p>
-  <hr class="rainbow">
-  <p>This page has been under construction since <span id="since2"></span>.</p>
-  <p>You are visitor number:</p>
-  <div class="counter" id="counter" aria-label="Visitor counter"></div>
-  <div class="badges"><span>Made with Notepad</span><span>HTML 3.2</span><span>No .NET required</span></div>
-  <div class="tape" style="margin-top:40px"></div>
-</section>
+  <!-- LOCK SCREEN: type CAM (2-2-6) -->
+  <section class="screen lock" id="lock" aria-label="Lock screen">
+    <div class="lock-bg"></div>
+    <div class="lock-ui">
+      <div class="lock-head">
+      <svg class="icon padlock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+      <h1>Enter Passcode</h1>
+      <div class="dots" id="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p class="hint" id="hint">Hint: whose phone is this? C·A·M</p>
+      <p class="sr-only" id="lockStatus" aria-live="polite"></p>
+      </div>
+      <div class="keypad">
+        <button class="key" type="button" data-key="1" aria-label="1"><b>1</b><small></small></button>
+        <button class="key" type="button" data-key="2" aria-label="2 ABC"><b>2</b><small>ABC</small></button>
+        <button class="key" type="button" data-key="3" aria-label="3 DEF"><b>3</b><small>DEF</small></button>
+        <button class="key" type="button" data-key="4" aria-label="4 GHI"><b>4</b><small>GHI</small></button>
+        <button class="key" type="button" data-key="5" aria-label="5 JKL"><b>5</b><small>JKL</small></button>
+        <button class="key" type="button" data-key="6" aria-label="6 MNO"><b>6</b><small>MNO</small></button>
+        <button class="key" type="button" data-key="7" aria-label="7 PQRS"><b>7</b><small>PQRS</small></button>
+        <button class="key" type="button" data-key="8" aria-label="8 TUV"><b>8</b><small>TUV</small></button>
+        <button class="key" type="button" data-key="9" aria-label="9 WXYZ"><b>9</b><small>WXYZ</small></button>
+        <button class="key zero" type="button" data-key="0" aria-label="0"><b>0</b><small></small></button>
+      </div>
+      <div class="lock-foot">
+        <button type="button" id="emergency">Emergency</button>
+        <button type="button" id="del">Delete</button>
+      </div>
+    </div>
+  </section>
+
+  <button class="homebar" id="homebar" type="button" aria-label="Go to the home screen"></button>
+</div>
 
 <script>
   /* ================= EDIT THIS: what you've actually paid (AUD) =================
@@ -236,10 +527,13 @@
     { year: 2026, hosting: 131.88, domain: 36.00 },
   ].map(r => ({ ...r, aud: r.hosting + r.domain }));
   const INTENTIONAL_VISITS_PER_YEAR = 20;
+  const PASSCODE = '226';   // C-A-M on a phone keypad
   /* ============================================================================ */
 
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+  const phone = $('#phone');
   const total = SPEND.reduce((s, r) => s + r.aud, 0);
-  const firstYear = LAUNCH.getFullYear();
   const daysUp = Math.floor((Date.now() - LAUNCH) / 864e5);
   const yearsUp = daysUp / 365.25;
   const renewals = SPEND.length;
@@ -248,17 +542,138 @@
   const fmt = n => n.toLocaleString('en-AU', { style: 'currency', currency: 'AUD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  document.getElementById('since').textContent = firstYear;
-  document.getElementById('since2').textContent = firstYear;
+  /* ---------- Status bar clock ---------- */
+  function tick() {
+    const d = new Date();
+    $('#clock').textContent = `${d.getHours() % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+  tick();
+  setInterval(tick, 15000);
 
-  const maxSpend = Math.max(...SPEND.map(r => r.aud));
-  const bars = document.getElementById('bars');
+  /* ---------- Lock screen ---------- */
+  const LETTERS = { abc: 2, def: 3, ghi: 4, jkl: 5, mno: 6, pqrs: 7, tuv: 8, wxyz: 9 };
+  const letterToKey = {};
+  Object.entries(LETTERS).forEach(([ls, n]) => [...ls].forEach(l => letterToKey[l] = String(n)));
+  const lock = $('#lock'), dots = $('#dots'), hint = $('#hint');
+  let entry = '', locked = true;
+
+  function showDots() { [...dots.children].forEach((d, k) => d.classList.toggle('on', k < entry.length)); }
+  function press(digit) {
+    if (!locked || entry.length >= PASSCODE.length) return;
+    entry += digit;
+    showDots();
+    if (entry.length < PASSCODE.length) return;
+    if (entry === PASSCODE) return setTimeout(unlock, 180);
+    // Wrong: shake, clear, and give them a hint
+    setTimeout(() => {
+      dots.classList.add('wrong');
+      $('#lockStatus').textContent = 'Wrong passcode. Hint: C A M.';
+      hint.classList.add('show');
+      setTimeout(() => { dots.classList.remove('wrong'); entry = ''; showDots(); }, 450);
+    }, 150);
+  }
+  function unlock() {
+    locked = false;
+    lock.classList.add('unlocked');
+    lock.setAttribute('aria-hidden', 'true');
+    phone.dataset.screen = 'home';
+    phone.classList.add('unlocked');
+  }
+  $$('.key').forEach(k => k.addEventListener('click', () => press(k.dataset.key)));
+  $('#del').addEventListener('click', () => { entry = entry.slice(0, -1); showDots(); });
+  $('#emergency').addEventListener('click', () => hint.classList.add('show'));
+  setTimeout(() => hint.classList.add('show'), 8000);   // stuck? here's a nudge
+
+  // Typing works too: digits, or the letters themselves (C, A, M)
+  addEventListener('keydown', e => {
+    if (!locked) return;
+    const k = e.key.toLowerCase();
+    const digit = /^[0-9]$/.test(k) ? k : letterToKey[k];
+    if (digit) {
+      press(digit);
+      const btn = $(`.key[data-key="${digit}"]`);
+      btn.classList.add('pressed');
+      setTimeout(() => btn.classList.remove('pressed'), 120);
+    } else if (k === 'backspace') {
+      entry = entry.slice(0, -1);
+      showDots();
+    }
+  });
+
+  /* ---------- Apps: open from the icon, close to home ---------- */
+  let current = null;
+  const opened = {};
+
+  function openApp(name, from) {
+    const app = $(`#app-${name}`);
+    if (current === name) return;
+    if (current) $(`#app-${current}`).classList.remove('open');   // jumping app to app via a link
+    // Zoom out of the icon it was launched from
+    const icon = from && from.closest('.appicon') ? from : $(`.appicon[data-open="${name}"] .tile`);
+    const p = phone.getBoundingClientRect(), r = icon.getBoundingClientRect();
+    app.style.setProperty('--ox', `${r.left + r.width / 2 - p.left}px`);
+    app.style.setProperty('--oy', `${r.top + r.height / 2 - p.top}px`);
+    app.classList.add('open');
+    phone.classList.add('in-app');
+    phone.dataset.screen = name;
+    if (current) history.replaceState({ app: name }, ''); else history.pushState({ app: name }, '');
+    current = name;
+    if (!opened[name]) { opened[name] = true; setTimeout(() => FIRST_OPEN[name]?.(), reduce ? 0 : 450); }
+    if (name === 'projects') armSign();
+  }
+
+  function closeApp() {
+    if (!current) return;
+    const was = current;
+    $(`#app-${was}`).classList.remove('open');
+    phone.classList.remove('in-app');
+    phone.dataset.screen = 'home';
+    current = null;
+    if (was === 'projects') setTimeout(resetSign, 400);   // he'll be back against the 8 next time
+  }
+
+  // Home: the home bar, "‹ Inbox", Escape, a swipe up from the bottom edge, or the browser's back button
+  function goHome() { if (current) history.state?.app ? history.back() : closeApp(); }
+  addEventListener('popstate', closeApp);
+  $('#homebar').addEventListener('click', goHome);
+  $$('[data-home]').forEach(b => b.addEventListener('click', goHome));
+  addEventListener('keydown', e => { if (e.key === 'Escape') goHome(); });
+  document.addEventListener('touchstart', () => {}, { passive: true });   // lets iOS Safari show :active on keys and icons
+  let swipeY = null;
+  phone.addEventListener('touchstart', e => {
+    const t = e.touches[0], p = phone.getBoundingClientRect();
+    swipeY = current && t.clientY > p.bottom - 44 ? t.clientY : null;
+  }, { passive: true });
+  phone.addEventListener('touchend', e => {
+    if (swipeY !== null && e.changedTouches[0].clientY < swipeY - 40) goHome();
+    swipeY = null;
+  });
+
+  $$('[data-open]').forEach(el => el.addEventListener('click', e => {
+    e.preventDefault();
+    openApp(el.dataset.open, el.closest('.appicon') ? el.querySelector('.tile') : null);
+  }));
+
+  const FIRST_OPEN = {
+    mail: () => $('#mailBadge').classList.add('gone'),
+    domains: startDash,
+  };
+
+  /* ---------- Domains: the update ---------- */
+  // Cumulative position, one bar per year, then one more for the future.
+  const bars = $('#bars');
+  let running = 0;
   SPEND.forEach(r => {
+    running += r.aud;
     const b = document.createElement('div');
     b.className = 'bar';
-    b.innerHTML = `<i data-h="${(r.aud / maxSpend) * 100}" title="${r.year}: ${fmt(r.aud)} (hosting ${fmt(r.hosting)} + domain ${fmt(r.domain)})"></i><span><b class="yl">${r.year}</b><b class="ys">’${String(r.year).slice(2)}</b></span>`;
+    b.innerHTML = `<span>’${String(r.year).slice(2)}</span><i data-h="${(running / total) * 100}" title="${r.year}: −${fmt(running)} cumulative"></i>`;
     bars.appendChild(b);
   });
+  const forever = document.createElement('div');
+  forever.className = 'bar forever';
+  forever.innerHTML = '<span>∞</span><i title="Projected: −$∞"></i>';
+  bars.appendChild(forever);
 
   function countUp(el, to, format, ms = 2200) {
     if (reduce) { el.textContent = format(to); return; }
@@ -272,21 +687,140 @@
     requestAnimationFrame(step);
   }
 
-  let fired = false;
-  new IntersectionObserver((entries, obs) => {
-    if (fired || !entries.some(e => e.isIntersecting)) return;
-    fired = true; obs.disconnect();
-    countUp(document.getElementById('total'), total, fmt);
-    countUp(document.getElementById('yearsUp'), yearsUp, n => n.toFixed(1), 1500);
-    countUp(document.getElementById('renewals'), renewals, n => Math.round(n), 1500);
-    countUp(document.getElementById('perVisit'), perVisit, n => '$' + n.toFixed(2), 1800);
-    countUp(document.getElementById('perDay'), perDay, n => '$' + n.toFixed(2), 1800);
-    bars.querySelectorAll('i').forEach((i, k) => setTimeout(() => i.style.height = (i.dataset.h * 1.76) + "px", reduce ? 0 : k * 90));
-  }, { threshold: 0.35 }).observe(document.querySelector('.s-dash'));
+  function startDash() {
+    const sc = $('#app-domains .scroller'), cue = $('#scrollcue');
+    // Each piece animates once, the first time it's fully scrolled into view
+    const pending = [
+      [$('#total'), () => {
+        countUp($('#total'), total, fmt);
+        countUp($('#yearsUp'), yearsUp, n => n.toFixed(1), 1500);
+        countUp($('#renewals'), renewals, n => Math.round(n), 1500);
+        countUp($('#perVisit'), perVisit, n => '$' + n.toFixed(2), 1800);
+        countUp($('#perDay'), perDay, n => '$' + n.toFixed(2), 1800);
+      }],
+      [bars, () => {
+        bars.querySelectorAll('.bar:not(.forever) i').forEach((i, k) => setTimeout(() => i.style.height = (i.dataset.h * 0.94) + 'px', reduce ? 0 : k * 90));
+        // The ∞ bar runs past the end of the page and stretches it, so you can follow it down
+        const i = forever.querySelector('i');
+        const top = i.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
+        const reach = sc.scrollHeight - top + 260;
+        setTimeout(() => i.style.height = reach + 'px', reduce ? 0 : SPEND.length * 90 + 300);
+      }],
+    ];
+    function check() {
+      cue.classList.toggle('gone', sc.scrollTop > 40);
+      const view = sc.getBoundingClientRect();
+      for (let k = pending.length - 1; k >= 0; k--) {
+        const r = pending[k][0].getBoundingClientRect();
+        if (r.top >= view.top && r.bottom <= view.bottom) pending.splice(k, 1)[0][1]();
+      }
+    }
+    sc.addEventListener('scroll', check, { passive: true });
+    addEventListener('resize', check);
+    check();
+  }
 
-  // Fake visitor counter: roughly 20 a year since launch
-  const visits = String(Math.round(yearsUp * INTENTIONAL_VISITS_PER_YEAR) + Math.floor(Math.random() * 3)).padStart(6, '0');
-  document.getElementById('counter').innerHTML = [...visits].map(d => `<b>${d}</b>`).join('');
+  /* ---------- Projects: the sign, 8 days → ∞ days ----------
+     One 3.4s timeline. Each part gets keyframes at absolute times (ms), converted to offsets. */
+  const scene = $('#scene'), stage = $('#eta');
+  const DURATION = 3400;
+  const rot = (deg, x = 0, y = 0) => `translate(${x}px, ${y}px) rotate(${deg}deg)`;
+  const TIMELINE = [
+    // whole man: wind up, shove, hang there, lose his footing, fall off the page
+    ['.p-fall', [
+      [0,    rot(0),             'ease-in-out'],
+      [380,  rot(-6),            'cubic-bezier(.5,0,.8,.4)'],
+      [620,  rot(7),             'ease-out'],
+      [760,  rot(5.5),           'ease-in-out'],
+      [1250, rot(5.5),           'cubic-bezier(.55,0,1,.45)'],
+      [1650, rot(34, 10, 4),     'cubic-bezier(.4,0,1,.6)'],
+      [3400, rot(210, 140, 1900)],
+    ]],
+    // his arm drops as the 8 swings away, then flails
+    ['.p-arm', [
+      [0,    'rotate(0deg)',  'linear'],
+      [640,  'rotate(0deg)',  'cubic-bezier(.6,0,1,.5)'],
+      [900,  'rotate(16deg)', 'ease-out'],
+      [1250, 'rotate(12deg)', 'ease-in-out'],
+      [1550, 'rotate(-55deg)', 'ease-in-out'],
+      [1800, 'rotate(5deg)',  'ease-in-out'],
+      [2050, 'rotate(-70deg)', 'ease-in-out'],
+      [2300, 'rotate(0deg)',  'ease-in-out'],
+      [2550, 'rotate(-60deg)', 'ease-in-out'],
+      [3400, 'rotate(-20deg)'],
+    ]],
+    // head: concentrates on the push, turns to camera ("uh oh"), whips back as he goes
+    ['.p-head', [
+      [0,    'rotate(0deg)',  'ease-in-out'],
+      [500,  'rotate(6deg)',  'ease-in-out'],
+      [950,  'rotate(6deg)',  'cubic-bezier(.3,1.6,.6,1)'],
+      [1100, 'rotate(-12deg)', 'linear'],
+      [1450, 'rotate(-12deg)', 'ease-in'],
+      [1800, 'rotate(-30deg)', 'ease-in-out'],
+      [3400, 'rotate(-10deg)'],
+    ]],
+    // eye goes wide
+    ['.p-eye', [
+      [0,    'scale(1)', 'linear'],
+      [1000, 'scale(1)', 'cubic-bezier(.3,1.8,.6,1)'],
+      [1150, 'scale(2)', 'linear'],
+      [3400, 'scale(2)'],
+    ]],
+    // the 8 tips over, overshoots, and wobbles to rest as an ∞
+    ['.eight', [
+      [0,    'rotate(0deg)',  'linear'],
+      [600,  'rotate(0deg)',  'cubic-bezier(.45,0,.75,.3)'],
+      [760,  'rotate(14deg)', 'cubic-bezier(.3,.4,.6,1)'],
+      [1080, 'rotate(104deg)', 'ease-in-out'],
+      [1240, 'rotate(84deg)', 'ease-in-out'],
+      [1380, 'rotate(94deg)', 'ease-in-out'],
+      [1500, 'rotate(89deg)', 'ease-out'],
+      [1600, 'rotate(90deg)', 'linear'],
+      [3400, 'rotate(90deg)'],
+    ]],
+    // "!"
+    ['.bang', [
+      [0,    'scale(0)', 'linear', 0],
+      [1080, 'scale(0)', 'cubic-bezier(.3,1.8,.6,1)', 0],
+      [1250, 'scale(1)', 'linear', 1],
+      [1550, 'scale(1)', 'ease-in', 1],
+      [1700, 'scale(0)', 'linear', 0],
+      [3400, 'scale(0)', 'linear', 0],
+    ]],
+  ];
+
+  let runs = [], pending;
+
+  function finish() {
+    stage.classList.add('done');
+    $('#etaText').textContent = 'Expected completion: ∞ days.';
+  }
+
+  function play() {
+    scene.classList.remove('idle');
+    runs = TIMELINE.map(([sel, frames]) =>
+      scene.querySelector(sel).animate(frames.map(([t, transform, easing = 'linear', opacity]) => ({
+        offset: t / DURATION, transform, easing, ...(opacity === undefined ? {} : { opacity }),
+      })), { duration: DURATION, fill: 'forwards' }));
+    runs[0].finished.then(finish, () => {});   // rejected when resetSign() cancels it
+  }
+
+  // Each time Projects opens, let them watch him whistle for a moment, then push
+  function armSign() {
+    clearTimeout(pending);
+    if (stage.classList.contains('done') || runs.length) return;
+    pending = setTimeout(reduce ? finish : play, reduce ? 0 : 1500);
+  }
+
+  // Put him back against the 8, ready to fall again
+  function resetSign() {
+    clearTimeout(pending);
+    runs.forEach(a => a.cancel());
+    runs = [];
+    stage.classList.remove('done');
+    scene.classList.add('idle');
+    $('#etaText').textContent = 'Expected completion: 8 days.';
+  }
 </script>
 </body>
 </html>
