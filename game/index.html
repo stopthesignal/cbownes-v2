@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Only load scripts, styles, images, audio, fonts and frames from this site; no network calls, plugins or forms. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A fun, poorly coded memory game to celebrate Cam's 22nd birthday">
+<meta name="author" content="Ben Kelly">
+<meta property="og:title" content="Cameron Bownes Matching Game!">
+<title>Cameron Bownes Memory Game!</title>
+<link rel="icon" href="img/back.png">
+<style>
+  /* Cameron Bownes: The Picture Game. A 1:1 content remake of the 2016 original
+     (itself built on "Memory" by Nick Salloum, callmenick.com, MIT licence),
+     rebuilt as one self-contained page that fits any screen. */
+  :root {
+    --text: #66686e;      /* original #787a80, darkened to pass WCAG AA (5.6:1 on white) */
+    --heading: #282a2f;
+    --red: #d61f36;       /* original #ff3c50, deepened so white text and red links pass AA (5.1:1) */
+    --red-dark: #a8102a;
+    --tile-back: #dcdee1;
+    --tile-front: #f8fafc;
+    --tile-line: #787a80;
+    --match: #ffffdc;
+    --gap: 8px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; background: #000; color: var(--text); font: 18px/1.4 "Roboto Slab", Rockwell, "Rockwell Nova", Georgia, serif; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  button { font: inherit; }
+  h1, h2, h3, p { margin: 0; font-weight: 400; }
+
+  .header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; }
+  .header h1 { margin-left: auto; color: #fff; font-size: 18px; line-height: 30px; text-align: right; }
+  .header a { color: #fff; opacity: .8; font-size: 14px; text-decoration: none; white-space: nowrap; }
+
+  .content { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px; background: #fff; }
+
+  /* Level / moves / start over */
+  .meta { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 10px; margin-bottom: 10px; color: #000; }
+  .meta span + span { margin-left: 16px; }
+  .btn { padding: 5px 8px; border: 0; border-radius: 3px; background: var(--red); color: #fff; font-size: 14px; cursor: pointer; }
+  .btn:hover { background: var(--red-dark); }
+  .actions { display: flex; align-items: center; gap: 8px; }
+  /* Music toggle: off until they turn it on */
+  .sound { display: grid; place-items: center; width: 34px; height: 30px; padding: 0; border: 1px solid #c9cbd0; border-radius: 3px; background: #fff; color: #000; cursor: pointer; }
+  .sound svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .sound .on, .sound[aria-pressed="true"] .off { display: none; }
+  .sound[aria-pressed="true"] .on { display: inline; }
+  .sound:focus-visible, .btn:focus-visible, .levels button:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+
+  /* Start and win screens */
+  .screen { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 20px 6px; text-align: center; }
+  /* Centred when it fits, scrollable from the top when it doesn't */
+  .screen > :first-child { margin-top: auto; }
+  .screen > :last-child { margin-bottom: auto; }
+  .screen h2 { margin-bottom: 10px; color: var(--heading); font-size: clamp(24px, 7vw, 30px); line-height: 1.2; }
+  .screen p { max-width: 34em; margin-bottom: 20px; }
+  .screen h3 { margin-bottom: 10px; color: #000; font-size: clamp(20px, 6vw, 24px); }
+  .screen h3::before, .screen h3::after { content: "-"; margin: 0 5px; }
+  .levels { list-style: none; margin: 0; padding: 0; }
+  .levels button { padding: 6px; border: 0; background: none; color: var(--red); font-size: 18px; cursor: pointer; }
+  .levels button:hover { color: var(--red-dark); }
+  .win h2 { color: #000; }
+  .win p { margin-bottom: 14px; }
+
+  /* The board: square tiles, sized by JS to fill the space, in whichever orientation fits best */
+  .board-area { flex: 1; min-height: 0; display: grid; place-items: center; }
+  .board { display: grid; gap: var(--gap); grid-template-columns: repeat(var(--cols), var(--size)); grid-auto-rows: var(--size); perspective: 1000px; }
+  .tile { position: relative; padding: 0; border: 0; background: none; cursor: pointer; }
+  .tile .inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .3s; }
+  .tile.flipped .inner { transform: rotateY(180deg); }
+  .face { position: absolute; inset: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; box-shadow: 0 0 0 1px var(--tile-line); }
+  .face.back { background: var(--tile-back) url("img/back.png") center / min(60px, 45%) no-repeat; }
+  .face.front { transform: rotateY(180deg); background: var(--tile-front); transition: box-shadow .3s, background .3s; }
+  .face.front img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .tile.correct .face.front { background: var(--match); box-shadow: 0 0 0 1px var(--tile-line), inset 0 0 0 4px #ffe066; }
+  .tile.correct .face.front img { opacity: .85; }
+  .tile:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+
+  @media (min-width: 700px) { .content { padding: 20px; } .header { padding: 10px 20px; } }
+  @media (prefers-reduced-motion: reduce) { .tile .inner, .face.front { transition: none; } }
+</style>
+</head>
+<body>
+  <header class="header">
+    <a href="/" id="standalone" hidden>‹ cameronbownes.com</a>
+    <h1>Cameron Bownes: The Picture Game</h1>
+  </header>
+
+  <main class="content">
+    <div class="meta">
+      <div><span>Level: <b id="level"></b></span><span>Moves: <b id="moves">0</b></span></div>
+      <div class="actions">
+        <button class="sound" type="button" id="sound" aria-pressed="false" aria-label="Music off. Turn music on">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path class="on" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/><path class="off" d="m16 9.5 5 5m0-5-5 5"/></svg>
+        </button>
+        <button class="btn" type="button" id="restart">Fuck it start over</button>
+      </div>
+    </div>
+    <div id="stage" class="screen"></div>
+  </main>
+
+  <audio id="monstro" src="audio/CamMonstro.mp3" preload="none" loop></audio>
+
+<script>
+  const CARDS = Array.from({ length: 16 }, (_, k) => ({ id: k + 1, img: `img/${String(k + 1).padStart(2, '0')}.jpg` }));
+  // Level n is a (2n + 2) x (n + 1) grid: 4 x 2, 6 x 3, 8 x 4
+  const LEVELS = { 1: [4, 2], 2: [6, 3], 3: [8, 4] };
+
+  const $ = s => document.querySelector(s);
+  const stage = $('#stage'), music = $('#monstro');
+  let game = 0;          // bumped on every reset, so old timers from a previous game do nothing
+  let level, moves, matched, first, second, busy, grid;
+
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  function setMeta() {
+    $('#level').textContent = level || '';
+    $('#moves').textContent = moves;
+  }
+
+  function startScreen() {
+    game++;
+    level = ''; moves = 0;
+    setMeta();
+    stage.className = 'screen';
+    stage.innerHTML = `
+      <h2>Remembering Cameron Bownes</h2>
+      <p>Flip the tiles to match pictures of our beloved Cameron to unlock a special reward</p>
+      <h3>Select Level</h3>
+      <ul class="levels">
+        <li><button type="button" data-level="1">Level 1 - Easy (4 x 2)</button></li>
+        <li><button type="button" data-level="2">Level 2 - Medium (6 x 3)</button></li>
+        <li><button type="button" data-level="3">Level 3 - Hard (8 x 4)</button></li>
+      </ul>`;
+    stage.querySelectorAll('[data-level]').forEach(b => b.addEventListener('click', () => play(+b.dataset.level)));
+  }
+
+  function play(n) {
+    game++;
+    level = n; moves = 0; matched = 0; first = second = null; busy = false;
+    setMeta();
+    grid = LEVELS[n];
+    const pairs = grid[0] * grid[1] / 2;
+    const deck = shuffle(shuffle([...CARDS]).slice(0, pairs).flatMap(c => [c, c]));
+    stage.className = 'board-area';
+    stage.innerHTML = `<div class="board">${deck.map((c, k) => `
+      <button class="tile" type="button" data-id="${c.id}" aria-label="Card ${k + 1}">
+        <span class="inner"><span class="face back"></span><span class="face front"><img src="${c.img}" alt=""></span></span>
+      </button>`).join('')}</div>`;
+    stage.querySelectorAll('.tile').forEach(t => t.addEventListener('click', () => flip(t)));
+    fit();
+  }
+
+  function flip(tile) {
+    if (busy || tile.classList.contains('flipped')) return;
+    tile.classList.add('flipped');
+    tile.setAttribute('aria-label', 'Photo of Cam');
+    if (!first) { first = tile; return; }
+    second = tile;
+    busy = true;
+    moves++;
+    setMeta();
+    const g = game, a = first, b = second;
+    if (a.dataset.id === b.dataset.id) {
+      setTimeout(() => { if (g !== game) return; a.classList.add('correct'); b.classList.add('correct'); }, 300);
+      setTimeout(() => {
+        if (g !== game) return;
+        a.classList.remove('correct'); b.classList.remove('correct');
+        first = second = null; busy = false;
+        matched += 2;
+        if (matched === grid[0] * grid[1]) win();
+      }, 1500);
+    } else {
+      setTimeout(() => {
+        if (g !== game) return;
+        [a, b].forEach(t => { t.classList.remove('flipped'); t.setAttribute('aria-label', 'Hidden card'); });
+        first = second = null; busy = false;
+      }, 900);
+    }
+  }
+
+  function win() {
+    game++;
+    stage.className = 'screen win';
+    stage.innerHTML = `
+      <h2>CAMGRATULATIONS!</h2>
+      <p>You managed to match pictures of Cam in only ${moves} moves! The reward is knowing Cam, and having a place for him in your heart &lt;3 #praise #loveyoucam</p>
+      <button class="btn" type="button">Play again?</button>`;
+    stage.querySelector('button').addEventListener('click', startScreen);
+  }
+
+  // Size the tiles to fill the space, turning the grid sideways if that makes them bigger
+  function fit() {
+    const board = stage.querySelector('.board');
+    if (!board) return;
+    const gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap'));
+    const w = stage.clientWidth, h = stage.clientHeight;
+    const size = ([c, r]) => Math.min((w - gap * (c - 1)) / c, (h - gap * (r - 1)) / r);
+    const wide = grid, tall = [grid[1], grid[0]];
+    const [cols] = size(tall) > size(wide) ? tall : wide;
+    board.style.setProperty('--cols', cols);
+    board.style.setProperty('--size', Math.floor(Math.max(size(tall), size(wide))) + 'px');
+  }
+  new ResizeObserver(fit).observe(stage);
+
+  $('#restart').addEventListener('click', startScreen);
+
+  // On its own (not inside the phone), offer a way back to the main site
+  if (window.top === window) $('#standalone').hidden = false;
+
+  // Called by the phone when the Game app is closed or reopened
+  // Music is off until they turn it on. In the original it started with the first level.
+  const soundBtn = $('#sound');
+  let soundOn = false, visible = true;
+  function syncMusic() {
+    if (soundOn && visible) music.play().catch(() => setSound(false)); else music.pause();
+  }
+  function setSound(on) {
+    soundOn = on;
+    soundBtn.setAttribute('aria-pressed', on);
+    soundBtn.setAttribute('aria-label', on ? 'Music on. Turn music off' : 'Music off. Turn music on');
+    syncMusic();
+  }
+  soundBtn.addEventListener('click', () => setSound(!soundOn));
+
+  // Called by the phone when the Game app is hidden or shown again
+  window.appHidden = () => { visible = false; syncMusic(); };
+  window.appShown = () => { visible = true; syncMusic(); };
+
+  startScreen();
+</script>
+</body>
+</html>

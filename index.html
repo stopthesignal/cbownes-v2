@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- Only load scripts, styles, images, audio, fonts and frames from this site; no network calls, plugins or forms. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; font-src 'none'; frame-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#dfe3e8">
 <title>cameronbownes.com</title>
@@ -11,12 +14,12 @@
   :root {
     --ink: #1c1c1e;
     --mail-bg: #ffffff;
-    --mail-sub: #8e8e93;
-    --mail-link: #0a7aff;
+    --mail-sub: #6c6c70;   /* iOS grey #8e8e93 is only 3.3:1 on white; this is 5.3:1 */
+    --mail-link: #0062d1;  /* iOS blue #0a7aff is 4:1; this passes AA at 5.6:1 */
     --mail-rule: #e5e5ea;
     --col: 430px;            /* width of the phone on desktop */
     --sbh: calc(44px + env(safe-area-inset-top, 0px));   /* status bar height */
-    --app-icon: linear-gradient(160deg, #23698d, #164a66);
+    --app-icon: linear-gradient(160deg, #23698d, #164a66);   /* default; each app sets its own below */
     --desk: #dfe3e8;
     --dash-bg: #0f1a2b;
     --dash-panel: #16243a;
@@ -48,6 +51,8 @@
   .statusbar svg { height: 12px; width: auto; fill: currentColor; }
   .phone[data-screen="lock"]     { --sb-fg: #fff; }
   .phone[data-screen="mail"]     { --sb-bg: #fff; }
+  .phone[data-screen="game"],
+  .phone[data-screen="photos"]   { --sb-fg: #fff; --sb-bg: #000; }
   .phone[data-screen="domains"],
   .phone[data-screen="projects"] { --sb-fg: #fff; --sb-bg: var(--dash-bg); }
 
@@ -72,13 +77,11 @@
   .lock-head { display: flex; flex-direction: column; align-items: center; }
   .lock-ui .padlock { width: 26px; height: 26px; stroke-width: 2; }
   .lock-ui h1 { font-size: 20px; font-weight: 500; margin: 10px 0 16px; }
-  .dots { display: flex; gap: 22px; height: 14px; }
+  .dots { display: flex; gap: 22px; height: 14px; margin-bottom: 18px; }
   .dots i { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #fff; transition: background .12s; }
   .dots i.on { background: #fff; }
   .dots.wrong { animation: shake .45s; }
   @keyframes shake { 20%, 60% { transform: translateX(-12px); } 40%, 80% { transform: translateX(12px); } }
-  .hint { font-size: 13px; margin: 12px 0 0; min-height: 18px; text-align: center; opacity: 0; transition: opacity .4s; letter-spacing: .04em; }
-  .hint.show { opacity: .85; }
   .keypad { display: grid; grid-template-columns: repeat(3, var(--key)); gap: calc(var(--key) * .2) calc(var(--key) * .34); margin: auto 0; padding: 12px 0; user-select: none; -webkit-user-select: none; }
   .key { width: var(--key); height: var(--key); border-radius: 50%; background: rgba(255,255,255,.16); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; transition: background .15s; }
   .key:active, .key.pressed { background: rgba(255,255,255,.5); transition: none; }
@@ -86,7 +89,7 @@
   .key small { font-size: max(8px, calc(var(--key) * .13)); font-weight: 700; letter-spacing: .2em; margin-top: 3px; padding-left: .2em; min-height: 1em; }
   .key.zero { grid-column: 2; }
   .lock-foot { width: 100%; display: flex; justify-content: space-between; padding: 0 22px; font-size: 16px; user-select: none; -webkit-user-select: none; }
-  .lock-foot button { padding: 10px 0; }
+  .lock-foot > * { padding: 10px 0; }
   /* Landscape phone: heading and dots on the left, keypad on the right */
   @media (max-height: 460px) and (orientation: landscape) {
     .lock-ui {
@@ -104,19 +107,30 @@
   .home { background: #fff; transition: transform .4s cubic-bezier(.2,.8,.2,1), filter .4s; }
   .phone.in-app .home { transform: scale(.92); filter: brightness(.75); }
   .wallpaper { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
-  .dock { position: absolute; left: 12px; right: 12px; bottom: calc(30px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(3, 1fr); padding: 14px 8px 10px; border-radius: 30px; background: rgba(245,245,247,.55); -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4); border: 1px solid rgba(255,255,255,.6); }
+  .dock { position: absolute; left: 12px; right: 12px; bottom: calc(30px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(4, 1fr); padding: 14px 4px 10px; border-radius: 30px; background: rgba(255,255,255,.72); -webkit-backdrop-filter: blur(16px) saturate(1.6); backdrop-filter: blur(16px) saturate(1.6); border: 1px solid rgba(255,255,255,.9); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
   .appicon { display: flex; flex-direction: column; align-items: center; gap: 6px; }
   .appicon .tile { position: relative; width: 62px; height: 62px; border-radius: 16px; background: var(--app-icon); color: #fff; display: grid; place-items: center; box-shadow: 0 4px 10px rgba(10,40,60,.3); transition: transform .15s; }
   .appicon:active .tile { transform: scale(.9); }
   .appicon:focus { outline: none; }
   .appicon:focus-visible .tile { outline: 3px solid var(--mail-link); outline-offset: 3px; }
   .appicon .tile .icon { width: 32px; height: 32px; stroke-width: 1.7; }
+  /* Bright, distinct app colours. Every glyph clears 3:1 against its tile (WCAG non-text contrast). */
+  .appicon[data-open="mail"]     .tile { --app-icon: linear-gradient(160deg, #2f8af7, #0058d6); }
+  .appicon[data-open="domains"]  .tile { --app-icon: linear-gradient(160deg, #1ca852, #0b8a3e); }
+  .appicon[data-open="projects"] .tile { --app-icon: linear-gradient(160deg, #ffd84a, #f5a300); color: #1c1c1e; }
+  .appicon[data-open="game"]     .tile { --app-icon: linear-gradient(160deg, #b86bff, #6f2ae6); }
+  .appicon[data-open="photos"]   .tile { --app-icon: linear-gradient(160deg, #ff4f80, #d81b56); }
   .appicon .label { font-size: 12px; font-weight: 500; color: #111; }
-  .badge { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: #ff3b30; color: #fff; font-size: 13px; font-weight: 600; display: grid; place-items: center; transition: transform .25s; }
+  .badge { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: #e0241b; color: #fff; font-size: 13px; font-weight: 600; display: grid; place-items: center; transition: transform .25s; }
   .badge.gone { transform: scale(0); }
   .phone.unlocked .appicon { animation: pop .5s cubic-bezier(.3,1.5,.6,1) backwards; }
   .phone.unlocked .appicon:nth-child(2) { animation-delay: .06s; }
   .phone.unlocked .appicon:nth-child(3) { animation-delay: .12s; }
+  .phone.unlocked .appicon:nth-child(4) { animation-delay: .18s; }
+  /* A row of apps above the dock, lined up with the dock's columns */
+  .homerow { position: absolute; left: 12px; right: 12px; bottom: calc(30px + env(safe-area-inset-bottom, 0px) + 124px); display: grid; grid-template-columns: repeat(4, 1fr); padding: 0 5px; }
+  .homerow .label { text-shadow: 0 0 6px #fff, 0 0 2px #fff; }
+  .phone.unlocked .homerow .appicon { animation-delay: .24s; }
   @keyframes pop { from { transform: scale(.4); opacity: 0; } }
 
   /* ---------- Apps ----------
@@ -124,6 +138,10 @@
   .app { z-index: 10; padding-top: var(--sbh); overflow: hidden; background: var(--app-bg, #fff); border-radius: 44px; transform: scale(.14); opacity: 0; visibility: hidden; transform-origin: var(--ox, 50%) var(--oy, 85%); transition: transform .36s cubic-bezier(.4,0,.6,1), opacity .25s .08s, border-radius .36s, visibility 0s .36s; }
   .app.open { transform: none; opacity: 1; visibility: visible; border-radius: 0; transition: transform .45s cubic-bezier(.2,.9,.25,1), opacity .18s, border-radius .45s, visibility 0s; }
   .scroller { height: 100%; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  /* Game and Photos: their own pages, framed under a back bar */
+  #app-game, #app-photos { --app-bg: #000; }
+  .framewrap { height: 100%; display: flex; flex-direction: column; }
+  .framewrap iframe { flex: 1; min-height: 0; width: 100%; border: 0; display: block; background: #000; padding-bottom: env(safe-area-inset-bottom, 0px); }
 
   /* ---------- Mail ---------- */
   #app-mail { --app-bg: var(--mail-bg); }
@@ -173,7 +191,6 @@
   #app-domains { --app-bg: var(--dash-bg); }
   .meme { margin: 0; background: #000; }
   .meme img { width: 100%; height: auto; }
-  .meme-missing { aspect-ratio: 2/3; border: 2px dashed #555; display: grid; place-items: center; color: #888; font-size: 15px; padding: 20px; }
   .scrollcue { position: absolute; z-index: 6; left: 50%; bottom: calc(34px + env(safe-area-inset-bottom, 0px)); width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: rgba(0,0,0,.45); color: #fff; display: grid; place-items: center; pointer-events: none; transition: opacity .3s; animation: nudge 1.6s ease-in-out infinite; }
   .scrollcue.gone { opacity: 0; }
   @keyframes nudge { 50% { transform: translateY(6px); } }
@@ -211,6 +228,7 @@
   .uc-head h2 { color: var(--hazard); font-size: clamp(30px, 10vw, 40px); font-weight: 800; text-transform: uppercase; letter-spacing: .02em; line-height: 1.05; margin: 12px 0 0; }
 
   .stage { width: 100%; margin: 28px auto 0; }
+  .stage.done { cursor: pointer; }   /* tap to replay */
   /* Short screens: drop the cone and tighten up so the whole sign is on screen before he falls */
   @media (max-height: 640px) {
     .uc-body { padding: 14px 16px; }
@@ -288,6 +306,16 @@
       <button class="appicon" type="button" data-open="projects">
         <span class="tile"><svg class="icon" viewBox="0 0 24 24"><path d="M3 18h18M5 18v-2.5a7 7 0 0 1 14 0V18M10 9.2V6h4v3.2"/></svg></span>
         <span class="label">Projects</span>
+      </button>
+      <button class="appicon" type="button" data-open="game">
+        <span class="tile"><svg class="icon" viewBox="0 0 24 24"><path d="M7 6h10a5 5 0 0 1 5 5v1.5a3.5 3.5 0 0 1-6.3 2.1L14.5 13h-5l-1.2 1.6A3.5 3.5 0 0 1 2 12.5V11a5 5 0 0 1 5-5Z"/><path d="M6.5 9.5v3M5 11h3M15.5 10.5h.01M17.5 12h.01"/></svg></span>
+        <span class="label">Game</span>
+      </button>
+    </nav>
+    <nav class="homerow" aria-label="More apps">
+      <button class="appicon" type="button" data-open="photos">
+        <span class="tile"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-10 9"/></svg></span>
+        <span class="label">Photos</span>
       </button>
     </nav>
   </section>
@@ -380,8 +408,7 @@
     <div class="scroller">
       <nav class="appnav"><button class="back" type="button" data-home><svg class="icon" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg>Home</button><b>Domains</b></nav>
       <figure class="meme">
-        <img src="BadDayBen.jpg" alt="Ben Affleck, exhausted, smoking a cigarette"
-             onerror="this.outerHTML='<div class=&quot;meme-missing&quot;>Add BadDayBen.jpg to the repo</div>'">
+        <img src="BadDayBen.jpg" alt="Ben Affleck, exhausted, smoking a cigarette" width="841" height="1262">
       </figure>
 
       <section class="dash" aria-label="Update">
@@ -474,6 +501,22 @@
     </div>
   </section>
 
+  <!-- GAME and PHOTOS: the 2016 originals, remade as their own pages (game/, photos/)
+       and shown here in a frame. They load just after unlock. -->
+  <section class="screen app" id="app-game" aria-label="Game">
+    <div class="framewrap">
+      <nav class="appnav"><button class="back" type="button" data-home><svg class="icon" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg>Home</button><b>Game</b></nav>
+      <iframe data-src="game/index.html" data-app="game" title="Cameron Bownes: The Picture Game"></iframe>
+    </div>
+  </section>
+
+  <section class="screen app" id="app-photos" aria-label="Photos">
+    <div class="framewrap">
+      <nav class="appnav"><button class="back" type="button" data-home><svg class="icon" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg>Home</button><b>Photos</b></nav>
+      <iframe data-src="photos/index.html" data-app="photos" title="Cameron Bownes: The Man. The Myth. The Legend"></iframe>
+    </div>
+  </section>
+
   <!-- LOCK SCREEN: type CAM (2-2-6) -->
   <section class="screen lock" id="lock" aria-label="Lock screen">
     <div class="lock-bg"></div>
@@ -482,7 +525,6 @@
       <svg class="icon padlock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
       <h1>Enter Passcode</h1>
       <div class="dots" id="dots" aria-hidden="true"><i></i><i></i><i></i></div>
-      <p class="hint" id="hint">Hint: whose phone is this? C·A·M</p>
       <p class="sr-only" id="lockStatus" aria-live="polite"></p>
       </div>
       <div class="keypad">
@@ -498,7 +540,7 @@
         <button class="key zero" type="button" data-key="0" aria-label="0"><b>0</b><small></small></button>
       </div>
       <div class="lock-foot">
-        <button type="button" id="emergency">Emergency</button>
+        <span aria-hidden="true">Emergency</span>   <!-- for the look; it does nothing -->
         <button type="button" id="del">Delete</button>
       </div>
     </div>
@@ -554,7 +596,7 @@
   const LETTERS = { abc: 2, def: 3, ghi: 4, jkl: 5, mno: 6, pqrs: 7, tuv: 8, wxyz: 9 };
   const letterToKey = {};
   Object.entries(LETTERS).forEach(([ls, n]) => [...ls].forEach(l => letterToKey[l] = String(n)));
-  const lock = $('#lock'), dots = $('#dots'), hint = $('#hint');
+  const lock = $('#lock'), dots = $('#dots');
   let entry = '', locked = true;
 
   function showDots() { [...dots.children].forEach((d, k) => d.classList.toggle('on', k < entry.length)); }
@@ -564,11 +606,10 @@
     showDots();
     if (entry.length < PASSCODE.length) return;
     if (entry === PASSCODE) return setTimeout(unlock, 180);
-    // Wrong: shake, clear, and give them a hint
+    // Wrong: shake and clear
     setTimeout(() => {
       dots.classList.add('wrong');
-      $('#lockStatus').textContent = 'Wrong passcode. Hint: C A M.';
-      hint.classList.add('show');
+      $('#lockStatus').textContent = 'Wrong passcode.';
       setTimeout(() => { dots.classList.remove('wrong'); entry = ''; showDots(); }, 450);
     }, 150);
   }
@@ -581,8 +622,6 @@
   }
   $$('.key').forEach(k => k.addEventListener('click', () => press(k.dataset.key)));
   $('#del').addEventListener('click', () => { entry = entry.slice(0, -1); showDots(); });
-  $('#emergency').addEventListener('click', () => hint.classList.add('show'));
-  setTimeout(() => hint.classList.add('show'), 8000);   // stuck? here's a nudge
 
   // Typing works too: digits, or the letters themselves (C, A, M)
   addEventListener('keydown', e => {
@@ -604,10 +643,16 @@
   let current = null;
   const opened = {};
 
+  // Framed apps (Game, Photos) load the first time they are opened, and get told when
+  // they are shown or hidden so their music pauses when you leave.
+  const appFrames = $$('iframe[data-src]');
+  const frameFor = name => appFrames.find(f => f.dataset.app === name);
+  const tellFrame = (name, hook) => { try { frameFor(name)?.contentWindow?.[hook]?.(); } catch (e) {} };
+
   function openApp(name, from) {
     const app = $(`#app-${name}`);
     if (current === name) return;
-    if (current) $(`#app-${current}`).classList.remove('open');   // jumping app to app via a link
+    if (current) { $(`#app-${current}`).classList.remove('open'); tellFrame(current, 'appHidden'); }   // jumping app to app via a link
     // Zoom out of the icon it was launched from
     const icon = from && from.closest('.appicon') ? from : $(`.appicon[data-open="${name}"] .tile`);
     const p = phone.getBoundingClientRect(), r = icon.getBoundingClientRect();
@@ -619,7 +664,10 @@
     if (current) history.replaceState({ app: name }, ''); else history.pushState({ app: name }, '');
     current = name;
     if (!opened[name]) { opened[name] = true; setTimeout(() => FIRST_OPEN[name]?.(), reduce ? 0 : 450); }
+    const frame = frameFor(name);
+    if (frame && !frame.getAttribute('src')) frame.src = frame.dataset.src;
     if (name === 'projects') armSign();
+    tellFrame(name, 'appShown');
   }
 
   function closeApp() {
@@ -630,6 +678,7 @@
     phone.dataset.screen = 'home';
     current = null;
     if (was === 'projects') setTimeout(resetSign, 400);   // he'll be back against the 8 next time
+    tellFrame(was, 'appHidden');
   }
 
   // Home: the home bar, "‹ Inbox", Escape, a swipe up from the bottom edge, or the browser's back button
@@ -805,12 +854,21 @@
     runs[0].finished.then(finish, () => {});   // rejected when resetSign() cancels it
   }
 
-  // Each time Projects opens, let them watch him whistle for a moment, then push
-  function armSign() {
+  // Each time Projects opens, let them watch him whistle for a moment, then push.
+  // This plays even with "reduce motion" on: the fall is the punchline, not decoration
+  // (reduced motion only drops the idle breathing/bobbing loops).
+  function armSign(delay = 1500) {
     clearTimeout(pending);
     if (stage.classList.contains('done') || runs.length) return;
-    pending = setTimeout(reduce ? finish : play, reduce ? 0 : 1500);
+    pending = setTimeout(play, delay);
   }
+
+  // Missed it? Tap the sign once he's gone to put him back and watch it again
+  stage.addEventListener('click', () => {
+    if (!stage.classList.contains('done')) return;
+    resetSign();
+    armSign(600);
+  });
 
   // Put him back against the 8, ready to fall again
   function resetSign() {

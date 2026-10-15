@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Only load scripts, styles, images, audio, fonts and frames from this site; no network calls, plugins or forms. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Cameron Bownes">
+<title>Cameron Bownes</title>
+<style>
+  /* Cameron Bownes: The Man. The Myth. The Legend. A 1:1 content remake of the
+     original crossfading slideshow. Eight photos, six seconds each, on a 48s loop.
+     The original used the Bebas Neue web font; this uses condensed fonts already on
+     the device (iPhone/Mac, Windows, Android), set in bold capitals to match. */
+  :root { --display: "Avenir Next Condensed", "Arial Narrow", "Roboto Condensed", "Helvetica Neue", Arial, sans-serif; }
+  .slides h3, .slides h4, header h1 { font-family: var(--display); font-weight: 700; font-stretch: condensed; text-transform: uppercase; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { overflow: hidden; background: #000; color: #fff; font-family: Constantia, Palatino, "Palatino Linotype", "Palatino LT STD", Georgia, serif; -webkit-tap-highlight-color: transparent; }
+  h1, h2, h3, h4 { margin: 0; font-weight: 400; }
+
+  /* The slideshow, with the original 2x2 "screen door" pattern laid over it */
+  .slides, .slides::after { position: fixed; inset: 0; }
+  .slides { list-style: none; margin: 0; padding: 0; }
+  .slides::after { content: ""; background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAABhJREFUeNpiYGBgePz//38GRhABAgABBgBFTAbfCBNE2AAAAABJRU5ErkJggg==") repeat, linear-gradient(rgba(0,0,0,.55), transparent 190px); }   /* dotted overlay + a fade at the top so the header stays readable */
+  .slides li > span { position: absolute; inset: 0; background: center / cover no-repeat; opacity: 0; animation: image 48s linear infinite; }
+  .slides li > div { position: absolute; z-index: 2; left: 0; right: 0; bottom: calc(30px + env(safe-area-inset-bottom, 0px)); padding: 0 16px; text-align: center; opacity: 0; animation: title 48s linear infinite; text-shadow: 0 2px 18px rgba(0,0,0,.55); }
+  .slides h3 { font-size: clamp(56px, 17vw, 220px); line-height: .9; }
+  .slides h4 { font-size: clamp(28px, 8vw, 70px); line-height: 1.05; }
+  .slides li:nth-child(1) span { background-image: url("img/1.jpg"); }
+  .slides li:nth-child(2) span { background-image: url("img/2.jpg"); }
+  .slides li:nth-child(3) span { background-image: url("img/3.jpg"); }
+  .slides li:nth-child(4) span { background-image: url("img/4.jpg"); }
+  .slides li:nth-child(5) span { background-image: url("img/5.jpg"); }
+  .slides li:nth-child(6) span { background-image: url("img/6.jpg"); }
+  .slides li:nth-child(7) span { background-image: url("img/7.jpg"); }
+  .slides li:nth-child(8) span { background-image: url("img/8.jpg"); }
+  .slides li:nth-child(2) > * { animation-delay: 6s; }
+  .slides li:nth-child(3) > * { animation-delay: 12s; }
+  .slides li:nth-child(4) > * { animation-delay: 18s; }
+  .slides li:nth-child(5) > * { animation-delay: 24s; }
+  .slides li:nth-child(6) > * { animation-delay: 30s; }
+  .slides li:nth-child(7) > * { animation-delay: 36s; }
+  .slides li:nth-child(8) > * { animation-delay: 42s; }
+  @keyframes image {
+    0%   { opacity: 0; animation-timing-function: ease-in; }
+    8%   { opacity: 1; animation-timing-function: ease-out; }
+    17%  { opacity: 1; }
+    25%  { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  @keyframes title {
+    0%   { opacity: 0; }
+    8%   { opacity: 1; }
+    17%  { opacity: 1; }
+    19%  { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  header { position: relative; z-index: 3; padding: 30px 30px 10px 20px; margin: 0 20px 10px; text-shadow: 0 1px 3px rgba(0,0,0,.8), 0 0 14px rgba(0,0,0,.5); }
+  header h1 { font-size: 32px; line-height: 35px; padding-bottom: 5px; }
+  header h2 { font-size: 16px; font-style: italic; color: #f8f8f8; text-shadow: 1px 1px 1px rgba(0,0,0,.6); }
+  @media (max-width: 600px) { header { padding: 18px 140px 6px 12px; margin: 0; } }   /* right padding keeps clear of the Music button */
+
+  /* Music toggle: off until they turn it on */
+  .sound { position: fixed; z-index: 4; right: 14px; top: 14px; display: flex; align-items: center; gap: 6px; padding: 7px 12px 7px 10px; border: 1px solid rgba(255,255,255,.6); border-radius: 999px; background: rgba(0,0,0,.55); color: #fff; font: 14px/1 system-ui, sans-serif; cursor: pointer; }
+  .sound svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .sound .on, .sound[aria-pressed="true"] .off { display: none; }
+  .sound[aria-pressed="true"] .on { display: inline; }
+  .sound:focus-visible, .home:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  .home { position: fixed; z-index: 4; left: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); color: #fff; opacity: .75; font: 14px system-ui, sans-serif; text-decoration: none; }
+
+  /* Reduced motion: no crossfades, just the first slide and its title */
+  @media (prefers-reduced-motion: reduce) {
+    .slides li > * { animation: none; }
+    .slides li:first-child > * { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+  <ul class="slides">
+    <li><span></span><div><h3>Cameron Bownes</h3></div></li>
+    <li><span></span><div><h3>Our Saviour</h3></div></li>
+    <li><span></span><div><h3>Inventor of Electricity</h3></div></li>
+    <li><span></span><div><h4>"I have seen the face of God, and it was weeping"</h4></div></li>
+    <li><span></span><div><h3>Party Animal</h3></div></li>
+    <li><span></span><div><h3>The Ladies Man</h3></div></li>
+    <li><span></span><div><h3>Humble Genius</h3></div></li>
+    <li><span></span><div><h4>The rainbow in everyone's cloud</h4></div></li>
+  </ul>
+
+  <header>
+    <h1>Cameron Bownes</h1>
+    <h2>The Man. The Myth. The Legend</h2>
+  </header>
+
+  <button class="sound" id="sound" type="button" aria-pressed="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path class="on" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/><path class="off" d="m16 9.5 5 5m0-5-5 5"/></svg>
+    <span id="soundText">Music off</span>
+  </button>
+  <a class="home" id="standalone" href="/" hidden>‹ cameronbownes.com</a>
+  <audio id="ode" src="audio/ode-to-cam.mp3" preload="none" loop></audio>
+
+<script>
+  // The original autoplayed "Ode To Cam". Now it's off until they turn it on.
+  const ode = document.getElementById('ode'), sound = document.getElementById('sound');
+  let soundOn = false, visible = true;
+
+  function syncMusic() {
+    if (soundOn && visible) ode.play().catch(() => setSound(false)); else ode.pause();
+  }
+  function setSound(on) {
+    soundOn = on;
+    sound.setAttribute('aria-pressed', on);
+    document.getElementById('soundText').textContent = on ? 'Music on' : 'Music off';
+    syncMusic();
+  }
+  sound.addEventListener('click', () => setSound(!soundOn));
+
+  // Called by the phone when the Photos app is hidden or shown again
+  window.appHidden = () => { visible = false; syncMusic(); };
+  window.appShown = () => { visible = true; syncMusic(); };
+
+  if (window.top === window) document.getElementById('standalone').hidden = false;
+</script>
+</body>
+</html>
